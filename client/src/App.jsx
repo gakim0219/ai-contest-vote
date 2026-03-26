@@ -6,6 +6,7 @@ import PreliminaryPage from './pages/PreliminaryPage';
 import CeremonyPage from './pages/CeremonyPage';
 import AdminPage from './pages/AdminPage';
 import DrawPage from './pages/DrawPage';
+import RandomVotePage from './pages/RandomVotePage';
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
       <Route path="/ceremony" element={<CeremonyPage />} />
       <Route path="/admin" element={<AdminPage />} />
       <Route path="/draw" element={<DrawPage />} />
+      <Route path="/random-vote" element={<RandomVotePage />} />
       <Route path="*" element={<Navigate to="/vote" replace />} />
     </Routes>
   );

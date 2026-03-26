@@ -198,7 +198,7 @@ export async function updateSettings(_pw, settings) {
 
 // ── 관리자: 초기화 ──
 export async function resetData(_pw) {
-  const cols = ['public_votes', 'judge_scores', 'predictions', 'draw_winners', 'preliminary_votes'];
+  const cols = ['public_votes', 'judge_scores', 'predictions', 'draw_winners', 'vote_draw_winners', 'preliminary_votes'];
   for (const col of cols) {
     const snap = await getDocs(collection(db, col));
     if (snap.size > 0) {
@@ -262,5 +262,31 @@ export async function drawPick(_pw) {
 
 export async function getDrawWinners(_pw) {
   const snap = await getDocs(collection(db, 'draw_winners'));
+  return snap.docs.map(d => ({ id: d.id, voter_id: d.id, voter_name: d.data().voter_name, drawn_at: d.data().drawn_at }));
+}
+
+// ── 현장 인기투표 랜덤 추첨 ──
+export async function getVoteDrawEligible(_pw) {
+  const votesSnap = await getDocs(collection(db, 'public_votes'));
+  const eligible = votesSnap.docs.map(d => ({ voter_id: d.id, voter_name: d.data().voter_name, team_id: d.data().team_id }));
+  const drawnSnap = await getDocs(collection(db, 'vote_draw_winners'));
+  const drawnIds = drawnSnap.docs.map(d => d.id);
+  return { eligible, drawnIds };
+}
+
+export async function voteDrawPick(_pw) {
+  const votesSnap = await getDocs(collection(db, 'public_votes'));
+  const eligible = votesSnap.docs.map(d => ({ voter_id: d.id, voter_name: d.data().voter_name, team_id: d.data().team_id }));
+  const drawnSnap = await getDocs(collection(db, 'vote_draw_winners'));
+  const drawnIds = drawnSnap.docs.map(d => d.id);
+  const remaining = eligible.filter(e => !drawnIds.includes(e.voter_id));
+  if (remaining.length === 0) throw new Error('추첨 가능한 사람이 없습니다');
+  const pick = remaining[Math.floor(Math.random() * remaining.length)];
+  await setDoc(doc(db, 'vote_draw_winners', pick.voter_id), { voter_name: pick.voter_name, team_id: pick.team_id, drawn_at: serverTimestamp() });
+  return { winner: pick };
+}
+
+export async function getVoteDrawWinners(_pw) {
+  const snap = await getDocs(collection(db, 'vote_draw_winners'));
   return snap.docs.map(d => ({ id: d.id, voter_id: d.id, voter_name: d.data().voter_name, drawn_at: d.data().drawn_at }));
 }
