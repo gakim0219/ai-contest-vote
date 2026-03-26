@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #08081a; color: #fff; }
+
+/* Animations */
+@keyframes fall { to { transform: translateY(105vh); } }
+@keyframes up { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes glow { 0%, 100% { box-shadow: 0 0 20px rgba(99,102,241,0.4); } 50% { box-shadow: 0 0 40px rgba(99,102,241,0.7); } }
+@keyframes pop { 0% { transform: scale(0); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+@keyframes bar { from { width: 0; } }
+@keyframes shine { 0% { left: -100%; } 100% { left: 200%; } }
+@keyframes spin { 0% { transform: translateY(0); } 100% { transform: translateY(-100%); } }
+@keyframes fin { from { opacity: 0; } to { opacity: 1; } }
+
+.animate-up { animation: up 0.5s ease-out; }
+.animate-pop { animation: pop 0.4s ease-out; }
+.animate-glow { animation: glow 2s infinite; }
+.animate-bar { animation: bar 1s ease-out; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
