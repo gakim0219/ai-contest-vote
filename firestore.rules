@@ -8,21 +8,21 @@ service cloud.firestore {
       allow read, write: if true;
     }
     match /public_votes/{voterId} {
-      allow read: if true;
-      allow create: if true;
+      allow read, write: if true;
     }
     match /preliminary_votes/{voterId} {
-      allow read: if true;
-      allow create: if true;
+      allow read, write: if true;
     }
     match /predictions/{voterId} {
-      allow read: if true;
-      allow create: if true;
+      allow read, write: if true;
     }
     match /judge_scores/{scoreId} {
       allow read, write: if true;
     }
     match /draw_winners/{winnerId} {
+      allow read, write: if true;
+    }
+    match /vote_draw_winners/{winnerId} {
       allow read, write: if true;
     }
   }

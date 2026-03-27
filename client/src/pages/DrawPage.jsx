@@ -41,13 +41,13 @@ export default function DrawPage() {
     setCurrentWinner(null);
 
     // 슬롯 애니메이션
-    const allNames = eligible.map(e => e.voter_name);
+    const allLabels = eligible.map(e => `${e.voter_id}_${e.voter_name}`);
     let i = 0;
     intervalRef.current = setInterval(() => {
       setDisplayNames([
-        allNames[i % allNames.length],
-        allNames[(i + 1) % allNames.length],
-        allNames[(i + 2) % allNames.length],
+        allLabels[i % allLabels.length],
+        allLabels[(i + 1) % allLabels.length],
+        allLabels[(i + 2) % allLabels.length],
       ]);
       i++;
     }, 80);
@@ -58,7 +58,7 @@ export default function DrawPage() {
       try {
         const res = await drawPick(pw);
         setCurrentWinner(res.winner);
-        setDisplayNames([res.winner.voter_name]);
+        setDisplayNames([`${res.winner.voter_id}_${res.winner.voter_name}`]);
         await loadData();
       } catch (e) {
         alert(e.message);
@@ -120,8 +120,7 @@ export default function DrawPage() {
         {currentWinner && !spinning && (
           <div className="animate-pop">
             <div className="text-5xl mb-1.5">🎊</div>
-            <div className="text-4xl font-black" style={{ color: '#10b981' }}>{currentWinner.voter_name}</div>
-            <div className="text-sm font-semibold mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>{currentWinner.voter_id}</div>
+            <div className="text-4xl font-black" style={{ color: '#10b981' }}>{currentWinner.voter_id}_{currentWinner.voter_name}</div>
             <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>축하합니다!</p>
           </div>
         )}
@@ -148,8 +147,7 @@ export default function DrawPage() {
           {winners.map((w, i) => (
             <div key={w.id || i} className="flex items-center gap-2 py-1.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
               <span className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold" style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981' }}>{i + 1}</span>
-              <span className="font-semibold">{w.voter_name}</span>
-              <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>{w.voter_id}</span>
+              <span className="font-semibold">{w.voter_id}_{w.voter_name}</span>
             </div>
           ))}
         </GlassBox>
