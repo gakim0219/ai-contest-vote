@@ -73,10 +73,11 @@ export default function VotePage() {
                   className="w-full py-3 pl-10 pr-3.5 rounded-xl text-sm text-white outline-none" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }} />
               </div>
             </div>
+            <PrivacyConsent checked={privacy} onChange={setPrivacy} accent="#6366f1" />
             {err && <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg mt-2 text-xs" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171' }}>⚠️ {err}</div>}
-            <button onClick={verify} disabled={loading}
+            <button onClick={verify} disabled={loading || !privacy}
               className="w-full py-3 rounded-xl text-sm font-bold mt-3 transition-all"
-              style={{ background: loading ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg,#6366f1,#6366f1cc)', color: loading ? 'rgba(255,255,255,0.25)' : '#fff' }}>
+              style={{ background: (loading || !privacy) ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg,#6366f1,#6366f1cc)', color: (loading || !privacy) ? 'rgba(255,255,255,0.25)' : '#fff' }}>
               {loading ? '확인 중...' : '투표 참여'}
             </button>
             <p className="text-[10px] mt-3.5 leading-relaxed" style={{ color: 'rgba(255,255,255,0.2)' }}>⚠️ 1인 1회 투표 · 부정 투표 시 무효 처리</p>
@@ -102,11 +103,10 @@ export default function VotePage() {
           <div className="flex flex-col gap-2.5">
             {teams.map(t => <TeamCard key={t.id} team={t} selected={sel === t.id} onSelect={setSel} />)}
           </div>
-          <PrivacyConsent checked={privacy} onChange={setPrivacy} accent="#6366f1" />
           {err && <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg mt-2 text-xs" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171' }}>⚠️ {err}</div>}
-          <button onClick={vote} disabled={!sel || !privacy || loading}
+          <button onClick={vote} disabled={!sel || loading}
             className="w-full py-3 rounded-xl text-sm font-bold mt-3.5 transition-all"
-            style={{ background: (!sel || !privacy) ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg,#6366f1,#6366f1cc)', color: (!sel || !privacy) ? 'rgba(255,255,255,0.25)' : '#fff' }}>
+            style={{ background: !sel ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg,#6366f1,#6366f1cc)', color: !sel ? 'rgba(255,255,255,0.25)' : '#fff' }}>
             {loading ? '투표 중...' : '투표하기'}
           </button>
         </div>

@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import GlassBox from './GlassBox';
+import PrivacyConsent from './PrivacyConsent';
 
-export default function AuthGate({ accent, icon, title, placeholder, onAuth, type = 'text', iconEmoji = '🔑' }) {
+export default function AuthGate({ accent, icon, title, placeholder, onAuth, type = 'text', iconEmoji = '🔑', showPrivacy = false }) {
   const [val, setVal] = useState('');
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
+  const [privacy, setPrivacy] = useState(false);
 
   const submit = async () => {
     if (!val.trim()) return setErr('입력해주세요');
@@ -18,6 +20,8 @@ export default function AuthGate({ accent, icon, title, placeholder, onAuth, typ
       setLoading(false);
     }
   };
+
+  const disabled = loading || (showPrivacy && !privacy);
 
   return (
     <div className="flex justify-center min-h-[50vh] items-center">
@@ -34,13 +38,14 @@ export default function AuthGate({ accent, icon, title, placeholder, onAuth, typ
           <input
             value={val}
             onChange={e => { setVal(e.target.value); setErr(''); }}
-            onKeyDown={e => e.key === 'Enter' && submit()}
+            onKeyDown={e => e.key === 'Enter' && !disabled && submit()}
             placeholder={placeholder}
             type={type}
             className="w-full py-3 pl-10 pr-3.5 rounded-xl text-sm text-white outline-none"
             style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}
           />
         </div>
+        {showPrivacy && <PrivacyConsent checked={privacy} onChange={setPrivacy} accent={accent} />}
         {err && (
           <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg mt-2 text-xs" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171' }}>
             ⚠️ {err}
@@ -48,9 +53,9 @@ export default function AuthGate({ accent, icon, title, placeholder, onAuth, typ
         )}
         <button
           onClick={submit}
-          disabled={loading}
+          disabled={disabled}
           className="w-full py-3 rounded-xl text-sm font-bold mt-3 transition-all"
-          style={{ background: loading ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg,${accent},${accent}cc)`, color: loading ? 'rgba(255,255,255,0.25)' : '#fff', cursor: loading ? 'not-allowed' : 'pointer' }}
+          style={{ background: disabled ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg,${accent},${accent}cc)`, color: disabled ? 'rgba(255,255,255,0.25)' : '#fff', cursor: disabled ? 'not-allowed' : 'pointer' }}
         >
           {loading ? '확인 중...' : '확인'}
         </button>

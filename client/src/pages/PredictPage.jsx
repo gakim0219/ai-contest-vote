@@ -75,10 +75,11 @@ export default function PredictPage() {
                   className="w-full py-3 pl-10 pr-3.5 rounded-xl text-sm text-white outline-none" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }} />
               </div>
             </div>
+            <PrivacyConsent checked={privacy} onChange={setPrivacy} accent={ACCENT} />
             {err && <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg mt-2 text-xs" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171' }}>⚠️ {err}</div>}
-            <button onClick={verify} disabled={loading}
+            <button onClick={verify} disabled={loading || !privacy}
               className="w-full py-3 rounded-xl text-sm font-bold mt-3 transition-all"
-              style={{ background: loading ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg,${ACCENT},${ACCENT}cc)`, color: loading ? 'rgba(255,255,255,0.25)' : '#fff' }}>
+              style={{ background: (loading || !privacy) ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg,${ACCENT},${ACCENT}cc)`, color: (loading || !privacy) ? 'rgba(255,255,255,0.25)' : '#fff' }}>
               {loading ? '확인 중...' : '참여하기'}
             </button>
             <p className="text-[10px] mt-3.5" style={{ color: 'rgba(255,255,255,0.2)' }}>⚠️ 1인 1회 · 1위 팀 맞히면 경품 추첨 대상!</p>
@@ -104,11 +105,10 @@ export default function PredictPage() {
           <div className="flex flex-col gap-2.5">
             {teams.map(t => <TeamCard key={t.id} team={t} selected={sel === t.id} onSelect={setSel} accent={ACCENT} />)}
           </div>
-          <PrivacyConsent checked={privacy} onChange={setPrivacy} accent={ACCENT} />
           {err && <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg mt-2 text-xs" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171' }}>⚠️ {err}</div>}
-          <button onClick={predict} disabled={!sel || !privacy || loading}
+          <button onClick={predict} disabled={!sel || loading}
             className="w-full py-3 rounded-xl text-sm font-bold mt-3.5 transition-all"
-            style={{ background: (!sel || !privacy) ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg,${ACCENT},${ACCENT}cc)`, color: (!sel || !privacy) ? 'rgba(255,255,255,0.25)' : '#fff' }}>
+            style={{ background: !sel ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg,${ACCENT},${ACCENT}cc)`, color: !sel ? 'rgba(255,255,255,0.25)' : '#fff' }}>
             {loading ? '제출 중...' : '예측 제출'}
           </button>
         </div>

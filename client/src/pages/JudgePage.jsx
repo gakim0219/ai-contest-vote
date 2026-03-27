@@ -3,7 +3,6 @@ import PageShell from '../components/PageShell';
 import GlassBox from '../components/GlassBox';
 import AuthGate from '../components/AuthGate';
 import StarRating from '../components/StarRating';
-import PrivacyConsent from '../components/PrivacyConsent';
 import { getTeams, judgeAuth, getJudgeScores, submitJudgeScore } from '../api';
 
 const CRITERIA = [
@@ -20,7 +19,6 @@ export default function JudgePage() {
   const [scores, setScores] = useState({}); // { "teamId-criteriaId": number }
   const [done, setDone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [privacy, setPrivacy] = useState(false);
 
   useEffect(() => { getTeams().then(setTeams).catch(() => {}); }, []);
 
@@ -73,7 +71,7 @@ export default function JudgePage() {
   if (!judge) {
     return (
       <PageShell accent="#f59e0b" icon="⚖️" title="심사위원 평가" sub="등록된 심사위원만 접근 가능합니다">
-        <AuthGate accent="#f59e0b" icon="⚖️" title="심사위원 인증" placeholder="심사위원 이름" iconEmoji="⚖️" onAuth={handleAuth} />
+        <AuthGate accent="#f59e0b" icon="⚖️" title="심사위원 인증" placeholder="심사위원 이름" iconEmoji="⚖️" onAuth={handleAuth} showPrivacy />
       </PageShell>
     );
   }
@@ -156,14 +154,11 @@ export default function JudgePage() {
           </GlassBox>
 
           {allComplete && (
-            <>
-              <PrivacyConsent checked={privacy} onChange={setPrivacy} accent="#f59e0b" />
-              <button onClick={handleSubmit} disabled={submitting || !privacy}
-                className="w-full py-3 rounded-xl text-sm font-bold mt-3 transition-all"
-                style={{ background: (!privacy) ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg,#22c55e,#22c55ecc)', color: (!privacy) ? 'rgba(255,255,255,0.25)' : '#fff' }}>
-                {submitting ? '제출 중...' : '전체 평가 제출'}
-              </button>
-            </>
+            <button onClick={handleSubmit} disabled={submitting}
+              className="w-full py-3 rounded-xl text-sm font-bold mt-3 transition-all"
+              style={{ background: 'linear-gradient(135deg,#22c55e,#22c55ecc)', color: '#fff' }}>
+              {submitting ? '제출 중...' : '전체 평가 제출'}
+            </button>
           )}
         </>
       )}
