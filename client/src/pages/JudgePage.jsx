@@ -3,6 +3,7 @@ import PageShell from '../components/PageShell';
 import GlassBox from '../components/GlassBox';
 import AuthGate from '../components/AuthGate';
 import StarRating from '../components/StarRating';
+import PrivacyConsent from '../components/PrivacyConsent';
 import { getTeams, judgeAuth, getJudgeScores, submitJudgeScore } from '../api';
 
 const CRITERIA = [
@@ -19,6 +20,7 @@ export default function JudgePage() {
   const [scores, setScores] = useState({}); // { "teamId-criteriaId": number }
   const [done, setDone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [privacy, setPrivacy] = useState(false);
 
   useEffect(() => { getTeams().then(setTeams).catch(() => {}); }, []);
 
@@ -154,11 +156,14 @@ export default function JudgePage() {
           </GlassBox>
 
           {allComplete && (
-            <button onClick={handleSubmit} disabled={submitting}
-              className="w-full py-3 rounded-xl text-sm font-bold mt-3 transition-all"
-              style={{ background: 'linear-gradient(135deg,#22c55e,#22c55ecc)', color: '#fff' }}>
-              {submitting ? '제출 중...' : '✅ 전체 평가 제출'}
-            </button>
+            <>
+              <PrivacyConsent checked={privacy} onChange={setPrivacy} accent="#f59e0b" />
+              <button onClick={handleSubmit} disabled={submitting || !privacy}
+                className="w-full py-3 rounded-xl text-sm font-bold mt-3 transition-all"
+                style={{ background: (!privacy) ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg,#22c55e,#22c55ecc)', color: (!privacy) ? 'rgba(255,255,255,0.25)' : '#fff' }}>
+                {submitting ? '제출 중...' : '전체 평가 제출'}
+              </button>
+            </>
           )}
         </>
       )}

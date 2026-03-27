@@ -52,7 +52,7 @@ export async function submitVote(voter_id, voter_name, team_id) {
   const ref = doc(db, 'public_votes', voter_id);
   const existing = await getDoc(ref);
   if (existing.exists()) throw new Error('이미 투표하셨습니다');
-  await setDoc(ref, { voter_name, team_id, voted_at: serverTimestamp() });
+  await setDoc(ref, { voter_id, voter_name, team_id, voted_at: serverTimestamp() });
   return { success: true };
 }
 
@@ -100,7 +100,7 @@ export async function submitPredict(voter_id, voter_name, predicted_team_id) {
   const ref = doc(db, 'predictions', voter_id);
   const existing = await getDoc(ref);
   if (existing.exists()) throw new Error('이미 참여하셨습니다');
-  await setDoc(ref, { voter_name, predicted_team_id, predicted_at: serverTimestamp() });
+  await setDoc(ref, { voter_id, voter_name, predicted_team_id, predicted_at: serverTimestamp() });
   return { success: true };
 }
 

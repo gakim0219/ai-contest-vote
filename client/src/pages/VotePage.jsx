@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import PageShell from '../components/PageShell';
 import GlassBox from '../components/GlassBox';
 import TeamCard from '../components/TeamCard';
+import PrivacyConsent from '../components/PrivacyConsent';
 import { getTeams, verifyVote, submitVote } from '../api';
 
 export default function VotePage() {
@@ -13,6 +14,7 @@ export default function VotePage() {
   const [sel, setSel] = useState(null);
   const [dupTeam, setDupTeam] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [privacy, setPrivacy] = useState(false);
 
   useEffect(() => { getTeams().then(setTeams).catch(() => {}); }, []);
 
@@ -100,10 +102,11 @@ export default function VotePage() {
           <div className="flex flex-col gap-2.5">
             {teams.map(t => <TeamCard key={t.id} team={t} selected={sel === t.id} onSelect={setSel} />)}
           </div>
+          <PrivacyConsent checked={privacy} onChange={setPrivacy} accent="#6366f1" />
           {err && <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg mt-2 text-xs" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171' }}>⚠️ {err}</div>}
-          <button onClick={vote} disabled={!sel || loading}
+          <button onClick={vote} disabled={!sel || !privacy || loading}
             className="w-full py-3 rounded-xl text-sm font-bold mt-3.5 transition-all"
-            style={{ background: !sel ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg,#6366f1,#6366f1cc)', color: !sel ? 'rgba(255,255,255,0.25)' : '#fff' }}>
+            style={{ background: (!sel || !privacy) ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg,#6366f1,#6366f1cc)', color: (!sel || !privacy) ? 'rgba(255,255,255,0.25)' : '#fff' }}>
             {loading ? '투표 중...' : '투표하기'}
           </button>
         </div>

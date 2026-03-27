@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import PageShell from '../components/PageShell';
 import GlassBox from '../components/GlassBox';
 import TeamCard from '../components/TeamCard';
+import PrivacyConsent from '../components/PrivacyConsent';
 import { getTeams, verifyPredict, submitPredict } from '../api';
 
 export default function PredictPage() {
@@ -13,6 +14,7 @@ export default function PredictPage() {
   const [sel, setSel] = useState(null);
   const [dupTeam, setDupTeam] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [privacy, setPrivacy] = useState(false);
 
   useEffect(() => { getTeams().then(setTeams).catch(() => {}); }, []);
 
@@ -102,10 +104,11 @@ export default function PredictPage() {
           <div className="flex flex-col gap-2.5">
             {teams.map(t => <TeamCard key={t.id} team={t} selected={sel === t.id} onSelect={setSel} accent={ACCENT} />)}
           </div>
+          <PrivacyConsent checked={privacy} onChange={setPrivacy} accent={ACCENT} />
           {err && <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg mt-2 text-xs" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171' }}>⚠️ {err}</div>}
-          <button onClick={predict} disabled={!sel || loading}
+          <button onClick={predict} disabled={!sel || !privacy || loading}
             className="w-full py-3 rounded-xl text-sm font-bold mt-3.5 transition-all"
-            style={{ background: !sel ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg,${ACCENT},${ACCENT}cc)`, color: !sel ? 'rgba(255,255,255,0.25)' : '#fff' }}>
+            style={{ background: (!sel || !privacy) ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg,${ACCENT},${ACCENT}cc)`, color: (!sel || !privacy) ? 'rgba(255,255,255,0.25)' : '#fff' }}>
             {loading ? '제출 중...' : '예측 제출'}
           </button>
         </div>
