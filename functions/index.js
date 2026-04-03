@@ -14,19 +14,19 @@ app.use(express.json());
 
 // ── 팀 데이터 ──
 const TEAMS = [
-  { id: 1, name: "Team Alpha", project: "AI 문서 자동 분류 Agent", desc: "사내 문서를 자동으로 분류하고 태그를 생성", members: "김민수, 이서연, 박지훈", company: "HD한국조선해양" },
-  { id: 2, name: "Team Nova", project: "회의록 요약 & Action Agent", desc: "Teams 회의 녹취를 분석하여 요약과 할일 추출", members: "정하늘, 최유진, 강도현", company: "HD현대건설기계" },
-  { id: 3, name: "Team Spark", project: "사내 규정 Q&A Agent", desc: "사내 규정을 자연어로 질의하면 정확한 답변", members: "윤서준, 한소희, 임태경", company: "HD현대인프라코어" },
-  { id: 4, name: "Team Orbit", project: "설비 이상 감지 예측 Agent", desc: "IoT 센서 데이터로 설비 이상을 실시간 예측", members: "송민재, 오지영, 배성훈", company: "HD현대일렉트릭" },
-  { id: 5, name: "Team Zenith", project: "자동 RFP 분석 Agent", desc: "RFP 문서의 핵심 요구사항과 리스크 자동 도출", members: "조은별, 신동욱, 류하은", company: "HD현대마린솔루션" },
+  { id: 1, name: "엔진품질기획팀", project: "엔진품질 실패비용 의사결정 AI Agent", desc: "엔진품질 실패비용 의사결정 지원", members: "양영철, 조재훈, 조남준", company: "HD현대중공업" },
+  { id: 2, name: "ICT솔루션연구실", project: "INTEGRICT Transformer DGA Report Copilot Agent", desc: "Transformer DGA Report 분석 지원", members: "민다함, 김준엽, 손준영", company: "HD현대일렉트릭" },
+  { id: 3, name: "글로벌구매기획부", project: "HD현대 구매AI \"PROCURA\"", desc: "구매 업무 AI 지원", members: "박성완, 오승훈, 신소라", company: "HD한국조선해양" },
+  { id: 4, name: "건기기능구매팀", project: "협력사 재무 risk 분석 Agent", desc: "협력사 재무 리스크 분석 지원", members: "김병욱, 고재훈", company: "HD건설기계" },
+  { id: 5, name: "기장설계부", project: "Valve List Agent", desc: "Valve List 업무 자동화 지원", members: "진가람", company: "HD현대이엔티" },
 ];
 
 // ── 기본 설정값 ──
 const DEFAULTS = {
   admin_password: 'ai1234',
-  judge_weight: '50',
-  public_weight: '30',
-  preliminary_weight: '20',
+  judge_weight: '30',
+  public_weight: '20',
+  preliminary_weight: '50',
   winner_team_id: '',
   innovation_weight: '25',
   completeness_weight: '25',
@@ -111,38 +111,31 @@ app.post('/api/vote', async (req, res) => {
 });
 
 // ════════════════════════════════════════════
-// 사전심사 투표 API
+// 사전심사 점수 API (관리자 직접 입력)
 // ════════════════════════════════════════════
-app.post('/api/preliminary/verify', async (req, res) => {
+app.get('/api/admin/preliminary-scores', adminAuth, async (req, res) => {
   try {
-    const { voter_id } = req.body;
-    if (!voter_id || !/^[A-Za-z]\d{6}$/.test(voter_id)) {
-      return res.status(400).json({ error: '사번은 영문 1자리 + 숫자 6자리입니다 (예: A000000)' });
-    }
-    const doc = await db.collection('preliminary_votes').doc(voter_id).get();
-    if (doc.exists) {
-      return res.json({ already_voted: true, team_id: doc.data().team_id });
-    }
-    res.json({ already_voted: false });
+    const snap = await db.collection('preliminary_scores').get();
+    const scores = {};
+    snap.forEach(d => { scores[d.id] = d.data().score; });
+    res.json(scores);
   } catch (e) { res.status(500).json({ error: '서버 오류' }); }
 });
 
-app.post('/api/preliminary', async (req, res) => {
+app.post('/api/admin/preliminary-scores', adminAuth, async (req, res) => {
   try {
-    const { voter_id, voter_name, team_id } = req.body;
-    if (!voter_id || !voter_name || !team_id) {
-      return res.status(400).json({ error: '필수 항목이 누락되었습니다' });
+    const { scores } = req.body;
+    if (!scores || typeof scores !== 'object') {
+      return res.status(400).json({ error: '점수 데이터가 필요합니다' });
     }
-    if (!/^[A-Za-z]\d{6}$/.test(voter_id)) {
-      return res.status(400).json({ error: '사번은 영문 1자리 + 숫자 6자리입니다 (예: A000000)' });
-    }
-    if (!TEAMS.find(t => t.id === team_id)) {
-      return res.status(400).json({ error: '유효하지 않은 팀입니다' });
-    }
-    const ref = db.collection('preliminary_votes').doc(voter_id);
-    const existing = await ref.get();
-    if (existing.exists) return res.status(409).json({ error: '이미 투표하셨습니다' });
-    await ref.set({ voter_name, team_id, voted_at: admin.firestore.FieldValue.serverTimestamp() });
+    const batch = db.batch();
+    Object.entries(scores).forEach(([teamId, score]) => {
+      batch.set(db.collection('preliminary_scores').doc(String(teamId)), {
+        score: Number(score),
+        updated_at: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    });
+    await batch.commit();
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: '서버 오류' }); }
 });
@@ -295,26 +288,27 @@ app.get('/api/admin/results', adminAuth, async (req, res) => {
     const totalCriteriaW = invW + comW + impW + preW;
 
     // 데이터 병렬 조회
-    const [votesSnap, prelimSnap, scoresSnap, predsSnap, judgesSnap] = await Promise.all([
+    const [votesSnap, prelimScoresSnap, scoresSnap, predsSnap, judgesSnap] = await Promise.all([
       db.collection('public_votes').get(),
-      db.collection('preliminary_votes').get(),
+      db.collection('preliminary_scores').get(),
       db.collection('judge_scores').get(),
       db.collection('predictions').get(),
       db.collection('judges').get(),
     ]);
 
     const totalVotes = votesSnap.size || 1;
-    const totalPrelimVotes = prelimSnap.size || 1;
 
     // 팀별 투표수 집계
     const voteMap = {};
     votesSnap.forEach(d => { const tid = d.data().team_id; voteMap[tid] = (voteMap[tid] || 0) + 1; });
-    const prelimMap = {};
-    prelimSnap.forEach(d => { const tid = d.data().team_id; prelimMap[tid] = (prelimMap[tid] || 0) + 1; });
+    const prelimScoresMap = {};
+    prelimScoresSnap.forEach(d => { prelimScoresMap[d.id] = d.data().score; });
 
     // 심사 점수
     const allScores = scoresSnap.docs.map(d => d.data());
     const judgeNames = new Set(allScores.map(s => s.judge_name));
+
+    const maxVotes = Math.max(...TEAMS.map(t => voteMap[t.id] || 0), 1);
 
     const results = TEAMS.map(team => {
       const teamScores = allScores.filter(s => s.team_id === team.id);
@@ -327,17 +321,15 @@ app.get('/api/admin/results', adminAuth, async (req, res) => {
         judgeAvg = (avgInv * invW + avgCom * comW + avgImp * impW + avgPre * preW) / totalCriteriaW;
       }
       const teamVotes = voteMap[team.id] || 0;
-      const publicScore = (teamVotes / totalVotes) * 10;
-      const teamPrelim = prelimMap[team.id] || 0;
-      const prelimScore = (teamPrelim / totalPrelimVotes) * 10;
-      const finalScore = judgeAvg * (judgeWeight / 100) + publicScore * (publicWeight / 100) + prelimScore * (prelimWeight / 100);
+      const publicScore = (teamVotes / maxVotes) * 10;
+      const prelimScore = prelimScoresMap[String(team.id)] || 0;
+      const finalScore = judgeAvg * (judgeWeight / 10) + publicScore * (publicWeight / 10) + prelimScore * (prelimWeight / 10);
 
       return {
         ...team,
         judgeAvg: Math.round(judgeAvg * 100) / 100,
         voteCount: teamVotes,
         publicScore: Math.round(publicScore * 100) / 100,
-        prelimVoteCount: teamPrelim,
         prelimScore: Math.round(prelimScore * 100) / 100,
         finalScore: Math.round(finalScore * 100) / 100,
       };
@@ -350,7 +342,6 @@ app.get('/api/admin/results', adminAuth, async (req, res) => {
         judgeCount: judgeNames.size,
         totalJudges: judgesSnap.size,
         totalPredictions: predsSnap.size,
-        totalPrelimVotes: prelimSnap.size,
         teamCount: TEAMS.length,
       },
       settings,
@@ -365,12 +356,6 @@ app.get('/api/admin/votes', adminAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: '서버 오류' }); }
 });
 
-app.get('/api/admin/preliminary-votes', adminAuth, async (req, res) => {
-  try {
-    const snap = await db.collection('preliminary_votes').orderBy('voted_at', 'desc').get();
-    res.json(snap.docs.map(d => ({ id: d.id, voter_id: d.id, ...d.data() })));
-  } catch (e) { res.status(500).json({ error: '서버 오류' }); }
-});
 
 app.get('/api/admin/predictions', adminAuth, async (req, res) => {
   try {
@@ -404,7 +389,7 @@ app.post('/api/admin/settings', adminAuth, async (req, res) => {
 
 app.post('/api/admin/reset', adminAuth, async (req, res) => {
   try {
-    const collections = ['public_votes', 'judge_scores', 'predictions', 'draw_winners', 'preliminary_votes'];
+    const collections = ['public_votes', 'judge_scores', 'predictions', 'draw_winners', 'preliminary_scores'];
     for (const col of collections) {
       const snap = await db.collection(col).get();
       const batch = db.batch();

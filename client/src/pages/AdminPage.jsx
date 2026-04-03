@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import PageShell from '../components/PageShell';
 import GlassBox from '../components/GlassBox';
 import AuthGate from '../components/AuthGate';
-import { adminAuth, getResults, getVotes, getPreliminaryVotes, getPredictions, getJudgeScoresAdmin, updateSettings, resetData, getJudges, addJudge, removeJudge } from '../api';
+import { adminAuth, getResults, getVotes, getPredictions, getJudgeScoresAdmin, updateSettings, resetData, getJudges, addJudge, removeJudge, getPreliminaryScores, savePreliminaryScores, getTeams } from '../api';
 
 const CRITERIA = [
   { id: 'innovation', label: '혁신성' },
@@ -15,10 +15,11 @@ export default function AdminPage() {
   const [pw, setPw] = useState(null);
   const [data, setData] = useState(null);
   const [votes, setVotes] = useState([]);
-  const [prelimVotes, setPrelimVotes] = useState([]);
   const [predictions, setPredictions] = useState([]);
+  const [prelimScores, setPrelimScores] = useState({});
   const [judgeScores, setJudgeScores] = useState([]);
   const [judges, setJudges] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [jWeight, setJWeight] = useState(50);
   const [pWeight, setPWeight] = useState(30);
   const [preWeight, setPreWeight] = useState(20);
@@ -32,22 +33,22 @@ export default function AdminPage() {
   const loadData = useCallback(async () => {
     if (!pw) return;
     try {
-      const [r, v, pv, p, js, j] = await Promise.all([
-        getResults(pw), getVotes(pw), getPreliminaryVotes(pw), getPredictions(pw), getJudgeScoresAdmin(pw), getJudges(pw),
+      const [r, v, p, js, j, ps] = await Promise.all([
+        getResults(pw), getVotes(pw), getPredictions(pw), getJudgeScoresAdmin(pw), getJudges(pw), getPreliminaryScores(),
       ]);
       setData(r);
       setVotes(v);
-      setPrelimVotes(pv);
       setPredictions(p);
       setJudgeScores(js);
       setJudges(j);
+      setPrelimScores(ps);
       setJWeight(parseInt(r.settings?.judge_weight) || 50);
       setPWeight(parseInt(r.settings?.public_weight) || 30);
       setPreWeight(parseInt(r.settings?.preliminary_weight) || 20);
     } catch {}
   }, [pw]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => { getTeams().then(setTeams); loadData(); }, [loadData]);
 
   const handleWeightSave = async () => {
     await updateSettings(pw, { judge_weight: jWeight, public_weight: pWeight, preliminary_weight: preWeight });
@@ -82,6 +83,15 @@ export default function AdminPage() {
     loadData();
   };
 
+  const handlePrelimScoreChange = (teamId, score) => {
+    setPrelimScores(prev => ({ ...prev, [String(teamId)]: score }));
+  };
+
+  const handlePrelimSave = async () => {
+    await savePreliminaryScores(prelimScores);
+    loadData();
+  };
+
   if (!pw) {
     return (
       <PageShell accent="#ef4444" icon="📊" title="관리자">
@@ -109,9 +119,8 @@ export default function AdminPage() {
       </div>
 
       {/* 요약 카드 */}
-      <div className="grid grid-cols-5 gap-1.5 mb-3">
+      <div className="grid grid-cols-4 gap-1.5 mb-3">
         {[
-          ['📋', summary.totalPrelimVotes || 0, '사전심사', '#f97316'],
           ['🗳️', summary.totalVotes || 0, '인기투표', '#a855f7'],
           ['⚖️', `${summary.judgeCount || 0}/${summary.totalJudges || 0}`, '심사위원', '#f59e0b'],
           ['🎯', summary.totalPredictions || 0, '예측참여', '#ec4899'],
@@ -145,6 +154,25 @@ export default function AdminPage() {
           ))}
           {judges.length === 0 && <span className="text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>등록된 심사위원이 없습니다</span>}
         </div>
+      </GlassBox>
+
+      {/* 사전심사 점수 입력 */}
+      <GlassBox className="mb-3" style={{ padding: 14 }}>
+        <h3 className="text-xs font-bold mb-2">사전심사 점수 (1~10)</h3>
+        <div className="flex flex-col gap-2">
+          {teams.map(t => (
+            <div key={t.id} className="flex items-center gap-2">
+              <span className="text-xs flex-1" style={{ color: 'rgba(255,255,255,0.6)' }}>{t.name}</span>
+              <input type="number" min={0} max={10} step={0.1}
+                value={prelimScores[String(t.id)] ?? ''}
+                onChange={e => handlePrelimScoreChange(t.id, e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="0"
+                className="w-16 py-1 px-2 rounded text-sm text-white text-center outline-none"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(249,115,22,0.3)' }} />
+            </div>
+          ))}
+        </div>
+        <button onClick={handlePrelimSave} className="w-full mt-2.5 py-1.5 rounded-lg text-xs font-semibold" style={{ background: 'rgba(249,115,22,0.15)', border: '1px solid rgba(249,115,22,0.3)', color: '#f97316', cursor: 'pointer' }}>사전심사 점수 저장</button>
       </GlassBox>
 
       {/* 가중치 설정 */}
@@ -214,20 +242,8 @@ export default function AdminPage() {
         </div>
       </GlassBox>
 
-      {/* 사전심사 / 투표 / 예측 상세 */}
-      <div className="grid grid-cols-3 gap-2 mb-3">
-        <GlassBox>
-          <h3 className="text-xs font-bold mb-2">사전심사 ({prelimVotes.length})</h3>
-          <div className="max-h-40 overflow-y-auto text-[11px]">
-            {prelimVotes.map(v => (
-              <div key={v.id} className="flex justify-between py-0.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
-                <span style={{ color: 'rgba(255,255,255,0.4)' }}>{v.voter_name}</span>
-                <span style={{ color: '#f97316' }}>{results.find(t => t.id === v.team_id)?.name}</span>
-              </div>
-            ))}
-            {prelimVotes.length === 0 && <p className="text-center py-2" style={{ color: 'rgba(255,255,255,0.2)' }}>없음</p>}
-          </div>
-        </GlassBox>
+      {/* 투표 / 예측 상세 */}
+      <div className="grid grid-cols-2 gap-2 mb-3">
         <GlassBox>
           <h3 className="text-xs font-bold mb-2">인기투표 ({votes.length})</h3>
           <div className="max-h-40 overflow-y-auto text-[11px]">

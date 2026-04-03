@@ -22,6 +22,9 @@ service cloud.firestore {
     match /draw_winners/{winnerId} {
       allow read, write: if true;
     }
+    match /preliminary_scores/{teamId} {
+      allow read, write: if true;
+    }
     match /vote_draw_winners/{winnerId} {
       allow read, write: if true;
     }

@@ -145,9 +145,9 @@ export default function JudgePage() {
             ))}
           </div>
 
-          {/* 가중 평균 */}
+          {/* 총점 */}
           <GlassBox className="mt-2.5 text-center" style={{ padding: 12 }}>
-            <div className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>가중 평균</div>
+            <div className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>총점</div>
             <div className="text-3xl font-extrabold" style={{ color: tw > 0 ? '#22c55e' : 'rgba(255,255,255,0.12)' }}>
               {tw.toFixed(1)}
             </div>

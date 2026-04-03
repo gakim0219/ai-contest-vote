@@ -10,7 +10,6 @@ const ACCENT = '#f97316'; // Orange
 export default function PreliminaryPage() {
   const [step, setStep] = useState('auth');
   const [teams, setTeams] = useState([]);
-  const [eid, setEid] = useState('');
   const [nm, setNm] = useState('');
   const [err, setErr] = useState('');
   const [sel, setSel] = useState(null);
@@ -21,12 +20,11 @@ export default function PreliminaryPage() {
   useEffect(() => { getTeams().then(setTeams).catch(() => {}); }, []);
 
   const verify = async () => {
-    const id = eid.trim(), n = nm.trim();
-    if (!id || !n) return setErr('사번과 이름을 모두 입력해주세요');
-    if (!/^[A-Za-z]\d{6}$/.test(id)) return setErr('사번은 영문 1자리 + 숫자 6자리입니다 (예: A000000)');
+    const n = nm.trim();
+    if (!n) return setErr('이름을 입력해주세요');
     setLoading(true);
     try {
-      const res = await verifyPreliminary(id);
+      const res = await verifyPreliminary(n);
       if (res.already_voted) {
         setDupTeam(teams.find(t => t.id === res.team_id));
         setStep('dup');
@@ -44,7 +42,7 @@ export default function PreliminaryPage() {
     if (!sel) return;
     setLoading(true);
     try {
-      await submitPreliminary(eid.trim(), nm.trim(), sel);
+      await submitPreliminary(nm.trim(), sel);
       setStep('done');
     } catch (e) {
       setErr(e.message);
@@ -61,19 +59,12 @@ export default function PreliminaryPage() {
             <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3.5 text-3xl"
               style={{ background: `linear-gradient(135deg,${ACCENT},#ea580c)` }}>📋</div>
             <h2 className="text-xl font-extrabold mb-1">본인 확인</h2>
-            <p className="text-xs mb-5" style={{ color: 'rgba(255,255,255,0.4)' }}>사번과 이름을 입력해주세요</p>
-            <div className="flex flex-col gap-2.5">
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm opacity-35">🔢</span>
-                <input value={eid} onChange={e => { setEid(e.target.value); setErr(''); }} placeholder="사번 (예: A000000)"
-                  className="w-full py-3 pl-10 pr-3.5 rounded-xl text-sm text-white outline-none" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }} />
-              </div>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm opacity-35">👤</span>
-                <input value={nm} onChange={e => { setNm(e.target.value); setErr(''); }} placeholder="이름 (실명)"
-                  onKeyDown={e => e.key === 'Enter' && verify()}
-                  className="w-full py-3 pl-10 pr-3.5 rounded-xl text-sm text-white outline-none" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }} />
-              </div>
+            <p className="text-xs mb-5" style={{ color: 'rgba(255,255,255,0.4)' }}>이름을 입력해주세요</p>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm opacity-35">👤</span>
+              <input value={nm} onChange={e => { setNm(e.target.value); setErr(''); }} placeholder="이름 (실명)"
+                onKeyDown={e => e.key === 'Enter' && verify()}
+                className="w-full py-3 pl-10 pr-3.5 rounded-xl text-sm text-white outline-none" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }} />
             </div>
             <PrivacyConsent checked={privacy} onChange={setPrivacy} accent={ACCENT} />
             {err && <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg mt-2 text-xs" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171' }}>⚠️ {err}</div>}

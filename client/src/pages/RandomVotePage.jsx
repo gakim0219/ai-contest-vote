@@ -76,10 +76,10 @@ export default function RandomVotePage() {
   }
 
   return (
-    <PageShell accent="#f97316" icon="🎲" title="인기투표 랜덤 추첨" sub="현장 인기투표 참여자 중 행운의 주인공은?">
+    <PageShell accent="#f97316" icon="🎲" title="참여자 랜덤 추첨" sub="인기투표 + 예측투표 참여자 중 행운의 주인공은?">
       {/* 참여자 현황 */}
       <GlassBox glow accent="#f97316" className="text-center mb-4">
-        <div className="text-[11px] mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>현장 인기투표 추첨</div>
+        <div className="text-[11px] mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>인기투표 + 예측투표 통합 추첨</div>
         <div className="text-lg font-bold" style={{ color: 'rgba(255,255,255,0.7)' }}>투표 참여자 중 랜덤 1명 선정</div>
         <div className="flex justify-center gap-4 mt-2.5">
           <div>

@@ -7,18 +7,18 @@ import {
 
 // ── 팀 데이터 ──
 const TEAMS = [
-  { id: 1, name: "Team Alpha", project: "AI 문서 자동 분류 Agent", desc: "사내 문서를 자동으로 분류하고 태그를 생성", members: "김민수, 이서연, 박지훈", company: "HD한국조선해양" },
-  { id: 2, name: "Team Nova", project: "회의록 요약 & Action Agent", desc: "Teams 회의 녹취를 분석하여 요약과 할일 추출", members: "정하늘, 최유진, 강도현", company: "HD현대건설기계" },
-  { id: 3, name: "Team Spark", project: "사내 규정 Q&A Agent", desc: "사내 규정을 자연어로 질의하면 정확한 답변", members: "윤서준, 한소희, 임태경", company: "HD현대인프라코어" },
-  { id: 4, name: "Team Orbit", project: "설비 이상 감지 예측 Agent", desc: "IoT 센서 데이터로 설비 이상을 실시간 예측", members: "송민재, 오지영, 배성훈", company: "HD현대일렉트릭" },
-  { id: 5, name: "Team Zenith", project: "자동 RFP 분석 Agent", desc: "RFP 문서의 핵심 요구사항과 리스크 자동 도출", members: "조은별, 신동욱, 류하은", company: "HD현대마린솔루션" },
+  { id: 1, name: "엔진품질기획팀", project: "엔진품질 실패비용 의사결정 AI Agent", desc: "엔진품질 실패비용 의사결정 지원", members: "양영철, 조재훈, 조남준", company: "HD현대중공업" },
+  { id: 2, name: "ICT솔루션연구실", project: "INTEGRICT Transformer DGA Report Copilot Agent", desc: "Transformer DGA Report 분석 지원", members: "민다함, 김준엽, 손준영", company: "HD현대일렉트릭" },
+  { id: 3, name: "글로벌구매기획부", project: "HD현대 구매AI \"PROCURA\"", desc: "구매 업무 AI 지원", members: "박성완, 오승훈, 신소라", company: "HD한국조선해양" },
+  { id: 4, name: "건기기능구매팀", project: "협력사 재무 risk 분석 Agent", desc: "협력사 재무 리스크 분석 지원", members: "김병욱, 고재훈", company: "HD건설기계" },
+  { id: 5, name: "기장설계부", project: "Valve List Agent", desc: "Valve List 업무 자동화 지원", members: "진가람", company: "HD현대이엔티" },
 ];
 
 const DEFAULTS = {
   admin_password: 'ai1234',
-  judge_weight: '50',
-  public_weight: '30',
-  preliminary_weight: '20',
+  judge_weight: '30',
+  public_weight: '20',
+  preliminary_weight: '50',
   winner_team_id: '',
   innovation_weight: '25',
   completeness_weight: '25',
@@ -56,18 +56,20 @@ export async function submitVote(voter_id, voter_name, team_id) {
   return { success: true };
 }
 
-// ── 사전심사 ──
-export async function verifyPreliminary(voter_id) {
-  const snap = await getDoc(doc(db, 'preliminary_votes', voter_id));
-  if (snap.exists()) return { already_voted: true, team_id: snap.data().team_id };
-  return { already_voted: false };
+// ── 사전심사 (관리자 점수 입력) ──
+export async function getPreliminaryScores() {
+  const snap = await getDocs(collection(db, 'preliminary_scores'));
+  const scores = {};
+  snap.forEach(d => { scores[d.id] = d.data().score; });
+  return scores;
 }
 
-export async function submitPreliminary(voter_id, voter_name, team_id) {
-  const ref = doc(db, 'preliminary_votes', voter_id);
-  const existing = await getDoc(ref);
-  if (existing.exists()) throw new Error('이미 투표하셨습니다');
-  await setDoc(ref, { voter_name, team_id, voted_at: serverTimestamp() });
+export async function savePreliminaryScores(scores) {
+  const batch = writeBatch(db);
+  Object.entries(scores).forEach(([teamId, score]) => {
+    batch.set(doc(db, 'preliminary_scores', String(teamId)), { score: Number(score), updated_at: serverTimestamp() });
+  });
+  await batch.commit();
   return { success: true };
 }
 
@@ -123,21 +125,21 @@ export async function getResults(_pw) {
   const preW = parseInt(settings.presentation_weight) || 20;
   const totalCriteriaW = invW + comW + impW + preW;
 
-  const [votesSnap, prelimSnap, scoresSnap, predsSnap, judgesSnap] = await Promise.all([
+  const [votesSnap, prelimScores, scoresSnap, predsSnap, judgesSnap] = await Promise.all([
     getDocs(collection(db, 'public_votes')),
-    getDocs(collection(db, 'preliminary_votes')),
+    getPreliminaryScores(),
     getDocs(collection(db, 'judge_scores')),
     getDocs(collection(db, 'predictions')),
     getDocs(collection(db, 'judges')),
   ]);
 
   const totalVotes = votesSnap.size || 1;
-  const totalPrelimVotes = prelimSnap.size || 1;
-  const voteMap = {}, prelimMap = {};
+  const voteMap = {};
   votesSnap.forEach(d => { const tid = d.data().team_id; voteMap[tid] = (voteMap[tid] || 0) + 1; });
-  prelimSnap.forEach(d => { const tid = d.data().team_id; prelimMap[tid] = (prelimMap[tid] || 0) + 1; });
   const allScores = scoresSnap.docs.map(d => d.data());
   const judgeNames = new Set(allScores.map(s => s.judge_name));
+
+  const maxVotes = Math.max(...TEAMS.map(t => voteMap[t.id] || 0), 1);
 
   const results = TEAMS.map(team => {
     const teamScores = allScores.filter(s => s.team_id === team.id);
@@ -150,20 +152,19 @@ export async function getResults(_pw) {
       judgeAvg = (avgInv * invW + avgCom * comW + avgImp * impW + avgPre * preW) / totalCriteriaW;
     }
     const teamVotes = voteMap[team.id] || 0;
-    const publicScore = (teamVotes / totalVotes) * 10;
-    const teamPrelim = prelimMap[team.id] || 0;
-    const prelimScore = (teamPrelim / totalPrelimVotes) * 10;
-    const finalScore = judgeAvg * (judgeWeight / 100) + publicScore * (publicWeight / 100) + prelimScore * (prelimWeight / 100);
+    const publicScore = (teamVotes / maxVotes) * 10;
+    const prelimScore = prelimScores[String(team.id)] || 0;
+    const finalScore = judgeAvg * (judgeWeight / 10) + publicScore * (publicWeight / 10) + prelimScore * (prelimWeight / 10);
     return {
       ...team, judgeAvg: Math.round(judgeAvg * 100) / 100, voteCount: teamVotes,
-      publicScore: Math.round(publicScore * 100) / 100, prelimVoteCount: teamPrelim,
+      publicScore: Math.round(publicScore * 100) / 100,
       prelimScore: Math.round(prelimScore * 100) / 100, finalScore: Math.round(finalScore * 100) / 100,
     };
   }).sort((a, b) => b.finalScore - a.finalScore);
 
   return {
     results,
-    summary: { totalVotes: votesSnap.size, judgeCount: judgeNames.size, totalJudges: judgesSnap.size, totalPredictions: predsSnap.size, totalPrelimVotes: prelimSnap.size, teamCount: TEAMS.length },
+    summary: { totalVotes: votesSnap.size, judgeCount: judgeNames.size, totalJudges: judgesSnap.size, totalPredictions: predsSnap.size, teamCount: TEAMS.length },
     settings,
   };
 }
@@ -173,10 +174,7 @@ export async function getVotes(_pw) {
   const snap = await getDocs(collection(db, 'public_votes'));
   return snap.docs.map(d => ({ id: d.id, voter_id: d.id, ...d.data() }));
 }
-export async function getPreliminaryVotes(_pw) {
-  const snap = await getDocs(collection(db, 'preliminary_votes'));
-  return snap.docs.map(d => ({ id: d.id, voter_id: d.id, ...d.data() }));
-}
+
 export async function getPredictions(_pw) {
   const snap = await getDocs(collection(db, 'predictions'));
   return snap.docs.map(d => ({ id: d.id, voter_id: d.id, ...d.data() }));
@@ -198,7 +196,7 @@ export async function updateSettings(_pw, settings) {
 
 // ── 관리자: 초기화 ──
 export async function resetData(_pw) {
-  const cols = ['public_votes', 'judge_scores', 'predictions', 'draw_winners', 'vote_draw_winners', 'preliminary_votes'];
+  const cols = ['public_votes', 'judge_scores', 'predictions', 'draw_winners', 'vote_draw_winners', 'preliminary_scores'];
   for (const col of cols) {
     const snap = await getDocs(collection(db, col));
     if (snap.size > 0) {
@@ -265,24 +263,37 @@ export async function getDrawWinners(_pw) {
   return snap.docs.map(d => ({ id: d.id, voter_id: d.id, voter_name: d.data().voter_name, drawn_at: d.data().drawn_at }));
 }
 
-// ── 현장 인기투표 랜덤 추첨 ──
+// ── 인기투표 + 예측투표 통합 랜덤 추첨 ──
 export async function getVoteDrawEligible(_pw) {
-  const votesSnap = await getDocs(collection(db, 'public_votes'));
-  const eligible = votesSnap.docs.map(d => ({ voter_id: d.id, voter_name: d.data().voter_name, team_id: d.data().team_id }));
-  const drawnSnap = await getDocs(collection(db, 'vote_draw_winners'));
+  const [votesSnap, predsSnap, drawnSnap] = await Promise.all([
+    getDocs(collection(db, 'public_votes')),
+    getDocs(collection(db, 'predictions')),
+    getDocs(collection(db, 'vote_draw_winners')),
+  ]);
+  const seen = new Set();
+  const eligible = [];
+  votesSnap.docs.forEach(d => {
+    if (!seen.has(d.id)) {
+      seen.add(d.id);
+      eligible.push({ voter_id: d.id, voter_name: d.data().voter_name });
+    }
+  });
+  predsSnap.docs.forEach(d => {
+    if (!seen.has(d.id)) {
+      seen.add(d.id);
+      eligible.push({ voter_id: d.id, voter_name: d.data().voter_name });
+    }
+  });
   const drawnIds = drawnSnap.docs.map(d => d.id);
   return { eligible, drawnIds };
 }
 
 export async function voteDrawPick(_pw) {
-  const votesSnap = await getDocs(collection(db, 'public_votes'));
-  const eligible = votesSnap.docs.map(d => ({ voter_id: d.id, voter_name: d.data().voter_name, team_id: d.data().team_id }));
-  const drawnSnap = await getDocs(collection(db, 'vote_draw_winners'));
-  const drawnIds = drawnSnap.docs.map(d => d.id);
+  const { eligible, drawnIds } = await getVoteDrawEligible(_pw);
   const remaining = eligible.filter(e => !drawnIds.includes(e.voter_id));
   if (remaining.length === 0) throw new Error('추첨 가능한 사람이 없습니다');
   const pick = remaining[Math.floor(Math.random() * remaining.length)];
-  await setDoc(doc(db, 'vote_draw_winners', pick.voter_id), { voter_name: pick.voter_name, team_id: pick.team_id, drawn_at: serverTimestamp() });
+  await setDoc(doc(db, 'vote_draw_winners', pick.voter_id), { voter_name: pick.voter_name, drawn_at: serverTimestamp() });
   return { winner: pick };
 }
 
